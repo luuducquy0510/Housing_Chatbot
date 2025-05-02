@@ -24,7 +24,7 @@ app.add_middleware(
 async def web_research(request: schemas.UserInput):
     async def stream():
         # context = ""
-        agent_result = await execute(
+        agent_result = execute(
             request
         )
         async for chunk in agent_result:
