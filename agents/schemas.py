@@ -1,8 +1,17 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class UserInput(BaseModel):
-    field_1: str
-    field_2: str
-    field_3: str
-    field_4: str
+    Area: float
+    BuildingYear: int
+    TimeToNearestStation: float
+    DistrictName: str  
+    RenovationEncoded: int
+    TradePrice: float
+
+
+class UserQuery(BaseModel):
+    """
+    Model to represent the user query.
+    """
+    query: str = Field(..., description="The query string provided by the user.")
