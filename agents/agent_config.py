@@ -14,40 +14,78 @@ API_KEY = os.environ["GOOGLE_API_KEY"]
 if not API_KEY:
     raise ValueError("API_KEY is not set in the environment variables.")
 
-healthcare_agent = Agent(
-    name="healthcare_agent",
+house_price_agent = Agent(
+    name="house_price_agent",
     model=AGENT_MODEL,
-    description="A healthcare agent that provides information about medical conditions, symptoms, and treatments.",
+    description="A chatbot that give advice on house prices, where the price is reasonable.",
     instruction="""
-        You are a healthcare agent. Your task is to provide information about medical conditions, symptoms, and treatments.
-        You should answer questions related to healthcare and provide relevant information to the user.
-        You will be given classification form ML output, and you should provide a response based on the classification.
+       You are a real estate agent. You are helping a user to find a house.
+       You are given the predicted price from ML model, you need to compare it with the price user provided.
+       If the predicted price is higher than the user provided price, you need to tell the user that the price is reasonable.
+       If the predicted price is lower than the user provided price, you need to tell the user that the price is too high.
+       Show the user the predicted price and the user provided price.
     """,
     # tools=[web_search_tool]
 )
 
 
 session_service = InMemorySessionService()
-runner = Runner(
-    agent=healthcare_agent,
-    app_name="healthcare_chatbot",
+price_runner = Runner(
+    agent=house_price_agent,
+    app_name="House_price_chatbot",
     session_service=session_service
 )
 USER_ID = "user_1"
 SESSION_ID = "session_1"
 
 
-async def execute(request):
+async def execute(predicted_price: float, user_provided_price: float):
     session_service.create_session(
-        app_name="healthcare_chatbot",
+        app_name="House_price_chatbot",
         user_id=USER_ID,
         session_id=SESSION_ID
     )
     prompt = f"""
-        Nothing for now
+    The predicted price is {predicted_price}, and the user provided price is {user_provided_price}.
+    If the predicted price is higher than the user provided price, you need to tell the user that the price is reasonable.
+    If the predicted price is lower than the user provided price, you need to tell the user that the price is too high.
+    Please answer in a friendly and professional manner.
     """
     message = types.Content(role="user", parts=[types.Part(text=prompt)])
-    async for event in runner.run_async(user_id=USER_ID, session_id=SESSION_ID, new_message=message):
+    async for event in price_runner.run_async(user_id=USER_ID, session_id=SESSION_ID, new_message=message):
+        if event.is_final_response():
+            response_text = event.content.parts[0].text
+            yield response_text
+
+
+housing_agent = Agent(
+    name="housing_agent",
+    model=AGENT_MODEL,
+    description="A chatbot that give advice on house prices, what to do at the current situation.",
+    instruction="""
+       You are a real estate agent. You are helping a user to find a house.
+       Based on the history of the conversation, you need to give the user advice on what to do.
+       You need to give the user a summary of the conversation and then give the user advice.
+    """,
+)
+
+housing_runner = Runner(
+    agent=housing_agent,
+    app_name="housing_agent",
+    session_service=session_service
+)
+
+async def follow_up(prompt: str):
+    session_service.create_session(
+        app_name="housing_agent",
+        user_id=USER_ID,
+        session_id=SESSION_ID
+    )
+    prompt = f"""
+    The user asked: {prompt}
+    """
+    message = types.Content(role="user", parts=[types.Part(text=prompt)])
+    async for event in housing_runner.run_async(user_id=USER_ID, session_id=SESSION_ID, new_message=message):
         if event.is_final_response():
             response_text = event.content.parts[0].text
             yield response_text
