@@ -1,6 +1,7 @@
 from google.adk.agents import Agent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from google.adk.tools import google_search
 from google.genai import types
 import os
 from dotenv import load_dotenv
@@ -19,14 +20,14 @@ house_price_agent = Agent(
     model=AGENT_MODEL,
     description="A chatbot that give advice on house prices, where the price is reasonable.",
     instruction="""
-       You are a real estate agent. You are helping a user to find a house.
-       You are given the predicted price from ML model, you need to compare it with the price user provided.
-       If the predicted price is higher than the user provided price, you need to tell the user that the price is reasonable.
-       If the predicted price is lower than the user provided price, you need to tell the user that the price is too high.
-       Show the user the predicted price and the user provided price.
+        You are a real estate agent in Japan. You are helping a user to find a house in Japan.
+        You are given the predicted price from ML model, you need to compare it with the price user provided.
+        If the predicted price is significantly higher than the user provided price, you need to tell the user that the price is too high.
+        If the predicted price is significantly lower than the user provided price, you need to tell the user that this may be a scam, and be careful.
+        If the predicted price is in reasonable range, you need to tell the user that the price is reasonable.
+        Show the user the predicted price and the user provided price.
     """,
-    # tools=[web_search_tool]
-)
+    )
 
 
 session_service = InMemorySessionService()
@@ -46,10 +47,8 @@ async def execute(predicted_price: float, user_provided_price: float):
         session_id=SESSION_ID
     )
     prompt = f"""
-    The predicted price is {predicted_price}, and the user provided price is {user_provided_price}.
-    If the predicted price is higher than the user provided price, you need to tell the user that the price is reasonable.
-    If the predicted price is lower than the user provided price, you need to tell the user that the price is too high.
-    Please answer in a friendly and professional manner.
+    The predicted price is {predicted_price}, and the price user recieved from the landlord is {user_provided_price}.
+    Please tell the user if the price is reasonable.
     """
     message = types.Content(role="user", parts=[types.Part(text=prompt)])
     async for event in price_runner.run_async(user_id=USER_ID, session_id=SESSION_ID, new_message=message):
@@ -63,10 +62,10 @@ housing_agent = Agent(
     model=AGENT_MODEL,
     description="A chatbot that give advice on house prices, what to do at the current situation.",
     instruction="""
-       You are a real estate agent. You are helping a user to find a house.
-       Based on the history of the conversation, you need to give the user advice on what to do.
-       You need to give the user a summary of the conversation and then give the user advice.
-    """,
+        You are a real estate agent in Japan. You are helping a user to find a house in Japan.
+        Based on the history of the conversation, you need to give the user advice on what to do.
+        You can use the google search tool to find the information you need.""",
+    tools = [google_search],
 )
 
 housing_runner = Runner(

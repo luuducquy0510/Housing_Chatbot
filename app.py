@@ -18,40 +18,43 @@ renovation = st.selectbox("Renovation Status", ["Not yet", "Done"])
 renovation_encoded = 0 if renovation == "Done" else 1
 quoted_price = st.number_input("Landlord's Quoted Price (¥)", step=1.0)
 
+
+# Submit
+submit_button_placeholder = st.empty()
+
 # Memory storage
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+with submit_button_placeholder.container():
+    if st.button("Submit"):
+        st.session_state.messages = []
+        payload = {
+            "Area": area,
+            "BuildingYear": year,
+            "TimeToNearestStation": station_time,
+            "DistrictName": district_name,
+            "RenovationEncoded": renovation_encoded,
+            "TradePrice": quoted_price
+        }
+
+        response = requests.post(f"{BACKEND_URL}/predict", json=payload, stream=True)
+        if response.status_code == 200:
+            streamed_reply = ""
+            for chunk in response.iter_content(chunk_size=1):
+                if chunk:
+                    streamed_reply += chunk.decode("utf-8", errors="ignore")
+                    # output_box.markdown(streamed_reply)
+
+            st.session_state.messages.append({"role": "assistant", "content": streamed_reply})
+
+
+
 
 # Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
-
-# Submit
-if st.button("Submit"):
-    payload = {
-        "Area": area,
-        "BuildingYear": year,
-        "TimeToNearestStation": station_time,
-        "DistrictName": district_name,
-        "RenovationEncoded": renovation_encoded,
-        "TradePrice": quoted_price
-    }
-
-    with st.chat_message("assistant"):
-        output_box = st.empty()
-        streamed_reply = ""
-
-        response = requests.post(f"{BACKEND_URL}/predict", json=payload, stream=True)
-        if response.status_code == 200:
-            for chunk in response.iter_content(chunk_size=1):
-                if chunk:
-                    streamed_reply += chunk.decode("utf-8", errors="ignore")
-                    output_box.markdown(streamed_reply)
-
-        st.session_state.messages.append({"role": "assistant", "content": streamed_reply})
-
-
 
 if prompt := st.chat_input("Ask your follow-up question..."):
     # Show user message
