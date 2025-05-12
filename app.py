@@ -9,14 +9,19 @@ st.set_page_config(page_title="Housing Price Advisor Chatbot")
 
 st.title("🏡 Housing Price Advisor")
 
+
 # Input fields matching UserInput schema
 area = st.number_input("Area (m²)", min_value=10.0, step=1.0)
 year = st.number_input("Building Year", min_value=1950, step=1)
 station_time = st.number_input("Time to Nearest Station (min)", min_value=0.0, step=1.0)
+
 district_name = st.text_input("District Name").strip().lower()
+station_name = st.text_input("Nearest Station").strip().lower()
+
 renovation = st.selectbox("Renovation Status", ["Not yet", "Done"])
-renovation_encoded = 0 if renovation == "Done" else 1
-quoted_price = st.number_input("Landlord's Quoted Price (¥)", step=1.0)
+floorplan = st.text_input("Floor Plan (e.g. 2LDK)").strip().upper()
+
+quoted_price = st.number_input("Landlord's Quoted Price (¥)", min_value=0.0, step=1.0)
 
 # Memory storage
 if "messages" not in st.session_state:
@@ -30,11 +35,13 @@ for msg in st.session_state.messages:
 # Submit
 if st.button("Submit"):
     payload = {
+        "DistrictName": district_name,
+        "NearestStation": station_name,
+        "MinTimeToNearestStation": station_time,
         "Area": area,
         "BuildingYear": year,
-        "TimeToNearestStation": station_time,
-        "DistrictName": district_name,
-        "RenovationEncoded": renovation_encoded,
+        "Renovation": renovation,
+        "FloorPlan": floorplan,
         "TradePrice": quoted_price
     }
 

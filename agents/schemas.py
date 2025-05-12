@@ -2,11 +2,13 @@ from pydantic import BaseModel, Field
 
 
 class UserInput(BaseModel):
+    DistrictName: str
+    NearestStation: str
+    MinTimeToNearestStation: float
     Area: float
     BuildingYear: int
-    TimeToNearestStation: float
-    DistrictName: str  
-    RenovationEncoded: int
+    Renovation: str
+    FloorPlan: str
     TradePrice: float
 
 

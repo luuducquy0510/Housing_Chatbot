@@ -4,6 +4,9 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 import os
 from dotenv import load_dotenv
+
+from agent_tools import web_search_tool
+
 load_dotenv()
 
 
@@ -17,15 +20,12 @@ if not API_KEY:
 house_price_agent = Agent(
     name="house_price_agent",
     model=AGENT_MODEL,
-    description="A chatbot that give advice on house prices, where the price is reasonable.",
+    description="A chatbot that give advice on house prices",
     instruction="""
        You are a real estate agent. You are helping a user to find a house.
        You are given the predicted price from ML model, you need to compare it with the price user provided.
-       If the predicted price is higher than the user provided price, you need to tell the user that the price is reasonable.
-       If the predicted price is lower than the user provided price, you need to tell the user that the price is too high.
        Show the user the predicted price and the user provided price.
     """,
-    # tools=[web_search_tool]
 )
 
 
@@ -63,10 +63,14 @@ housing_agent = Agent(
     model=AGENT_MODEL,
     description="A chatbot that give advice on house prices, what to do at the current situation.",
     instruction="""
-       You are a real estate agent. You are helping a user to find a house.
+       You are a real estate agent. You are helping a user to find a house in Japan.
        Based on the history of the conversation, you need to give the user advice on what to do.
        You need to give the user a summary of the conversation and then give the user advice.
+       You must use search_web_tool to search for external information in Japan
+       You must include resources to support your answer (urls, links,...)
     """,
+    tools=[web_search_tool]
+
 )
 
 housing_runner = Runner(

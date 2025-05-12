@@ -19,28 +19,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+model = joblib.load("linear_model.pkl")
+
 
 @app.post("/predict")
 async def housing_analyze(request: schemas.UserInput):
-    model = joblib.load("test_model.pkl")  # Ensure path is correct
-    le_district = joblib.load("district_encoder.pkl")
 
     district_name = request.DistrictName.strip().lower()  # normalize input
-    district_encoded = le_district.transform([district_name])[0]
+    station_name = request.NearestStation.strip().lower()
 
-    input_data = pd.DataFrame([{
-        "Area": request.Area,
-        "BuildingYear": request.BuildingYear,
-        "TimeToNearestStation": request.TimeToNearestStation,
-        "DistrictEncoded": district_encoded,
-        "RenovationEncoded": request.RenovationEncoded
-    }])
+    user_input = {
+    "DistrictName": district_name,
+    "NearestStation": station_name,
+    "MinTimeToNearestStation": request.MinTimeToNearestStation,
+    "Area": request.Area,
+    "BuildingYear": request.BuildingYear,
+    "Renovation": request.Renovation,
+    "FloorPlan": request.FloorPlan
+    }
 
-    prediction = model.predict(input_data)[0]
+    df = pd.DataFrame([user_input])
+
+    # Feature engineering for prediction
+    df["BuildingAge"] = 2024 - df["BuildingYear"]
+    df["Renovated"] = df["Renovation"].notnull().astype(int)
+    df["NumRooms"] = pd.to_numeric(df["FloorPlan"].str.extract(r'(\d+)')[0], errors='coerce').fillna(1)
+    df["HasL"] = df["FloorPlan"].str.contains("L").astype(int)
+    df["HasD"] = df["FloorPlan"].str.contains("D").astype(int)
+    df["HasK"] = df["FloorPlan"].str.contains("K").astype(int)
+    df["HasS"] = df["FloorPlan"].str.contains("S").astype(int)
+    df["Area_x_NumRooms"] = df["Area"] * df["NumRooms"]
+    df["MinTime_x_Area"] = df["MinTimeToNearestStation"] * df["Area"]
+    df["BuildingAgeGroup"] = pd.cut(df["BuildingAge"], bins=[0, 10, 20, 30, 50, 100], labels=False)
+
+    features = [
+    "DistrictName", "NearestStation", "MinTimeToNearestStation", "Area",
+    "BuildingAge", "BuildingAgeGroup", "Renovated", "NumRooms",
+    "HasL", "HasD", "HasK", "HasS",
+    "Area_x_NumRooms", "MinTime_x_Area"
+    ]
+
+    X_user = df[features]
+    predicted_price = model.predict(X_user)[0]
     async def stream():
         # context = ""
         agent_result = execute(
-            predicted_price=prediction,
+            predicted_price=predicted_price,
             user_provided_price=request.TradePrice
         )
         async for chunk in agent_result:
