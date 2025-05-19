@@ -5,7 +5,7 @@ from google.genai import types
 import os
 from dotenv import load_dotenv
 
-from agent_tools import web_search_tool
+from agent_tools import web_search_tool, web_search_tool_tavily
 
 load_dotenv()
 
@@ -13,9 +13,14 @@ load_dotenv()
 AGENT_MODEL = os.getenv("AGENT_MODEL")
 if not AGENT_MODEL:
     raise ValueError("AGENT_MODEL is not set in the environment variables.")
+
 API_KEY = os.environ["GOOGLE_API_KEY"]
 if not API_KEY:
     raise ValueError("API_KEY is not set in the environment variables.")
+
+TAVILY_API_KEY = os.environ["TAVILY_API_KEY"]
+if not TAVILY_API_KEY:
+    raise ValueError("TAVILY_API_KEY is not set in the environment variables.")
 
 house_price_agent = Agent(
     name="house_price_agent",
@@ -88,8 +93,8 @@ housing_agent = Agent(
        You must use search_web_tool to search for external information in Japan
        You must include resources to support your answer (urls, links,...)
     """,
-    tools=[web_search_tool]
-
+    # tools=[web_search_tool]
+    tools=[web_search_tool_tavily],
 )
 
 housing_runner = Runner(
